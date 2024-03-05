@@ -175,6 +175,19 @@ bool nas::handle_attach_request(uint32_t                enb_ue_s1ap_id,
   nas_logger.info("PDN Connectivity Request -- ESM Information Transfer requested: %s",
                   pdn_con_req.esm_info_transfer_flag_present ? "true" : "false");
 
+	nas nas_tmp(args, itf);
+	nas_tmp.m_ecm_ctx.enb_ue_s1ap_id = enb_ue_s1ap_id;
+	nas_tmp.m_ecm_ctx.mme_ue_s1ap_id = s1ap->get_next_mme_ue_s1ap_id();
+
+	srsran::unique_byte_buffer_t nas_tx = srsran::make_byte_buffer();
+	if (nas_tx == nullptr) {
+		nas_logger.error("Couldn't allocate PDU in %s().", __FUNCTION__);
+		return false;
+	}
+	nas_tmp.pack_service_reject(nas_tx.get(), LIBLTE_MME_EMM_CAUSE_SERVER_NETWORK_FAILURE);
+	s1ap->send_downlink_nas_transport(enb_ue_s1ap_id, nas_tmp.m_ecm_ctx.mme_ue_s1ap_id, nas_tx.get(), *enb_sri);
+	return true;
+
   // Get NAS Context if UE is known
   nas* nas_ctx = s1ap->find_nas_ctx_from_imsi(imsi);
   if (nas_ctx == NULL) {
